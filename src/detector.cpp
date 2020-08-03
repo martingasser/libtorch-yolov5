@@ -22,7 +22,9 @@ Detector::Run(const cv::Mat& img, float conf_threshold, float iou_threshold) {
 
     // keep the original image for visualization purpose
     cv::Mat img_input = img.clone();
-    std::vector<float> pad_info = LetterboxImage(img_input, img_input, cv::Size(640, 640));
+
+    // specify image size 640x384
+    std::vector<float> pad_info = LetterboxImage(img_input, img_input, cv::Size(640, 384));
     const float pad_w = pad_info[0];
     const float pad_h = pad_info[1];
     const float scale = pad_info[2];
@@ -33,9 +35,15 @@ Detector::Run(const cv::Mat& img, float conf_threshold, float iou_threshold) {
     tensor_img = tensor_img.permute({0, 3, 1, 2}).contiguous();  // BHWC -> BCHW (Batch, Channel, Height, Width)
 
     std::vector<torch::jit::IValue> inputs;
+
     inputs.emplace_back(tensor_img);
     // inference
+
+    // auto start = std::chrono::steady_clock::now();
     torch::jit::IValue output = module_.forward(inputs);
+    // auto end = std::chrono::steady_clock::now();
+    // double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    // std::cout << elapsed << " ms" << std::endl;
 
     auto detections = output.toTuple()->elements()[0].toTensor();
 

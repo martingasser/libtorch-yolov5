@@ -10,4 +10,4 @@ enum Det {
 };
 
 constexpr float kConfThreshold = 0.4;
-constexpr float kIouThreshold = 0.6;
+constexpr float kIouThreshold = 0.5;

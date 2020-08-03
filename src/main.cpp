@@ -153,7 +153,7 @@ int main(int argc, const char* argv[]) {
 
             while (true) {
                 cam >> img;
-
+                std::cout << img.size() << std::endl;
                 auto result = detector.Run(img, kConfThreshold, kIouThreshold);
 
                 DemoVideo(img, result, class_names);
