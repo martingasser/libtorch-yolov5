@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(libtorch-yolov5)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall")
-
 # Try to find OpenCV
 # set(OpenCV_DIR ....)
 find_package(OpenCV REQUIRED)
@@ -18,7 +16,7 @@ else ()
     message(FATAL_ERROR "Could not locate OpenCV" \n)
 endif()
 
-set(Torch_DIR libtorch/share/cmake/Torch)
+set(Torch_DIR ../../libtorch_1_6_0/share/cmake/Torch/)
 find_package(Torch REQUIRED)
 if (Torch_FOUND)
     message(STATUS "Torch library found!")
@@ -38,3 +36,5 @@ target_link_libraries (
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
 )
+
+set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_STANDARD 14)
