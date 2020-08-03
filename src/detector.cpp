@@ -43,16 +43,18 @@ Detector::Run(const cv::Mat& img, float conf_threshold, float iou_threshold) {
     // batch index(0), top-left x/y (1,2), bottom-right x/y (3,4), score(5), class id(6)
     auto result = PostProcessing(detections, conf_threshold, iou_threshold);
 
-    // Note - only the first image in the batch will be used for demo
+    // // Note - only the first image in the batch will be used for demo
     auto idx_mask = result * (result.select(1, 0) == 0).to(torch::kFloat32).unsqueeze(1);
     auto idx_mask_index =  torch::nonzero(idx_mask.select(1, 1)).squeeze();
+
     const auto& result_data_demo = result.index_select(0, idx_mask_index).slice(1, 1, 7);
 
-    // use accessor to access tensor elements efficiently
+    // // use accessor to access tensor elements efficiently
     const auto& demo_data = result_data_demo.accessor<float, 2>();
 
     // remap to original image and list bounding boxes for debugging purpose
     std::vector<std::tuple<cv::Rect, float, int>> demo_data_vec;
+
     for (int i = 0; i < result.size(0) ; i++) {
         auto x1 = static_cast<int>((demo_data[i][Det::tl_x] - pad_w)/scale);
         auto y1 = static_cast<int>((demo_data[i][Det::tl_y] - pad_h)/scale);
@@ -62,6 +64,7 @@ Detector::Run(const cv::Mat& img, float conf_threshold, float iou_threshold) {
         std::tuple<cv::Rect, float, int> t = std::make_tuple(rect, demo_data[i][Det::score], demo_data[i][Det::class_idx]);
         demo_data_vec.emplace_back(t);
     }
+
 
     return demo_data_vec;
 }
@@ -128,6 +131,7 @@ torch::Tensor Detector::GetBoundingBoxIoU(const torch::Tensor& box1, const torch
 
 torch::Tensor Detector::PostProcessing(const torch::Tensor& detections, float conf_thres, float iou_thres) {
     constexpr int item_attr_size = 5;
+
     int batch_size = detections.size(0);
     auto num_classes = detections.size(2) - item_attr_size;  // 80 for coco dataset
 
@@ -147,8 +151,9 @@ torch::Tensor Detector::PostProcessing(const torch::Tensor& detections, float co
     detections.slice(2, 0, 4) = box.slice(2, 0, 4);
 
     bool is_initialized = false;
-    torch::Tensor output = torch::zeros({1, 7});
+    torch::Tensor output = torch::zeros({0, 7});
 
+    
     // iterating all images in the batch
     for (int batch_i = 0; batch_i < batch_size; batch_i++) {
         auto det = torch::masked_select(detections[batch_i], conf_mask[batch_i]).view({-1, num_classes + item_attr_size});
@@ -158,8 +163,13 @@ torch::Tensor Detector::PostProcessing(const torch::Tensor& detections, float co
             continue;
         }
 
+        if (det.size(0) == 0) {
+            continue;
+        }
+        
         // get the max classes score at each result (e.g. elements 5-84)
-        std::tuple<torch::Tensor, torch::Tensor> max_classes = torch::max(det.slice(1, item_attr_size, item_attr_size + num_classes), 1);
+        auto slice = det.slice(1, item_attr_size, item_attr_size + num_classes);
+        std::tuple<torch::Tensor, torch::Tensor> max_classes = torch::max(slice, 1);
 
         // class score
         auto max_conf_score = std::get<0>(max_classes);
@@ -171,6 +181,7 @@ torch::Tensor Detector::PostProcessing(const torch::Tensor& detections, float co
 
         // shape: n * 6, top-left x/y (0,1), bottom-right x/y (2,3), score(4), class index(5)
         det = torch::cat({det.slice(1, 0, 4), max_conf_score, max_conf_index}, 1);
+        
 
         // get unique classes
         std::vector<torch::Tensor> img_classes;
