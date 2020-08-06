@@ -141,7 +141,8 @@ int main(int argc, const char* argv[]) {
         Demo(img, result, class_names);
     }
     else {
-            cv::VideoCapture cam(0);
+            // cv::VideoCapture cam(0);
+            cv::VideoCapture cam("v4l2src device=/dev/video4 ! video/x-raw,width=1280,height=720 ! videoscale ! videoconvert ! appsink", cv::CAP_GSTREAMER);
 
             while (!cam.isOpened()) {
                 std::cout << "Failed to make connection to cam" << std::endl;
